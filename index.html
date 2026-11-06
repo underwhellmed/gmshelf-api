@@ -213,13 +213,13 @@ body.playing .eq{opacity:.55}
 
 <main>
 <section class="page" id="page-home">
-<div class="pill" data-go="api"><b>Free API</b><span>No key. No signup. Just fetch it.</span><i data-lucide="arrow-right"></i></div>
+<div class="pill" data-go="api"><b>Free API</b><span>no key. no signup. just fetch.</span><i data-lucide="arrow-right"></i></div>
 <div class="hero-title"><i data-lucide="gamepad-2"></i><span>gmshelf</span></div>
-<p class="hero-sub">a free games api, open to everyone</p>
-<button class="sound" id="soundBtn" type="button">[ sound on ]</button>
+<p class="hero-sub">a free ubg api, open to everyone</p>
+<button class="sound" id="soundBtn" type="button">∙ sound on ∙</button>
 <form class="claim" id="homeForm">
 <input id="homePath" value="/api/games?limit=10" spellcheck="false" autocomplete="off" aria-label="endpoint">
-<button class="btn-light" type="submit">Try it <i data-lucide="arrow-right"></i></button>
+<button class="btn-light" type="submit">try <i data-lucide="arrow-right"></i></button>
 </form>
 <button class="scroll-hint" data-go="games" aria-label="browse games"><i data-lucide="chevron-down"></i></button>
 </section>
@@ -227,21 +227,21 @@ body.playing .eq{opacity:.55}
 <section class="page" id="page-games">
 <div class="container">
 <div class="page-head">
-<div><h1>game library</h1><div class="subtitle">a collection of browser games in one place, served by the api.</div></div>
-<button class="btn-ghost" id="refreshButton"><i data-lucide="refresh-cw"></i> refresh</button>
+<div><h1>library</h1><div class="subtitle">a ubg src, served by the api.</div></div>
+<button class="btn-ghost" id="refreshButton"><i data-lucide="refresh-cw"></i> reload</button>
 </div>
 <div class="search-wrap"><i data-lucide="search"></i><input id="search" type="search" placeholder="search games..." autocomplete="off"></div>
-<div class="meta"><span id="gameCount">loading games...</span><span id="apiVersion">gmshelf api</span></div>
+<div class="meta"><span id="gameCount">processing..</span><span id="apiVersion">gmshelf api</span></div>
 <div class="grid" id="gameGrid"></div>
-<div class="empty" id="emptyState" hidden>no games found.</div>
-<div class="empty" id="loadingState">loading games...</div>
+<div class="empty" id="emptyState" hidden>no results</div>
+<div class="empty" id="loadingState">processing...</div>
 <div class="empty" id="gameError" hidden></div>
 </div>
 </section>
 
 <section class="page" id="page-api">
 <div class="container">
-<div class="page-head"><div><h1>the gmshelf api</h1><div class="subtitle">free to use. no api key, no account, no rate-limit paywall.</div></div></div>
+<div class="page-head"><div><h1>the gmshelf api</h1><div class="subtitle">free to use. no api key, no account, no rate-limit & absolutely no paywall.</div></div></div>
 <div class="feature-row">
 <div class="glass feature"><i data-lucide="key-round"></i><h3>no key needed</h3><p>just send a request. nothing to sign up for.</p></div>
 <div class="glass feature"><i data-lucide="braces"></i><h3>plain json</h3><p>simple responses that work from any browser or language.</p></div>
@@ -252,8 +252,7 @@ body.playing .eq{opacity:.55}
 <div class="glass endpoint"><div class="ep-top"><span class="method">GET</span><span class="ep-path">/api/health</span><button class="btn-ghost ep-try" data-try="GET|/api/health">try</button></div><p class="ep-desc">check that the api is online. returns <code>{ ok: true, version }</code>.</p></div>
 <div class="glass endpoint"><div class="ep-top"><span class="method">GET</span><span class="ep-path">/api/games?limit=1000</span><button class="btn-ghost ep-try" data-try="GET|/api/games?limit=10">try</button></div><p class="ep-desc">list games. each game has <code>name</code>, <code>url</code>, <code>cover</code> and <code>source</code>. use <code>limit</code> to cap the amount.</p></div>
 <div class="glass endpoint"><div class="ep-top"><span class="method">GET</span><span class="ep-path">/api/cover?name=minecraft</span><button class="btn-ghost ep-try" data-try="GET|/api/cover?name=minecraft">try</button></div><p class="ep-desc">a fallback cover image generated for a game name.</p></div>
-<div class="glass endpoint"><div class="ep-top"><span class="method post">POST</span><span class="ep-path">/api/summary</span><button class="btn-ghost ep-try" data-try='POST|/api/summary|{"name":"Slope","url":"","source":"game"}'>try</button></div><p class="ep-desc">generate a short summary of a game. send json with <code>name</code>, <code>url</code> and <code>source</code>.</p></div>
-<h2>try it live</h2>
+<h2>try</h2>
 <div class="glass tester">
 <div class="tester-row"><select id="tMethod"><option>GET</option><option>POST</option></select><input id="tPath" value="/api/games?limit=5" spellcheck="false" autocomplete="off"><button class="btn-light" id="tSend">Send <i data-lucide="arrow-right"></i></button></div>
 <textarea id="tBody" placeholder='json body (POST only)' hidden></textarea>
@@ -268,23 +267,16 @@ body.playing .eq{opacity:.55}
 <div class="container">
 <div class="page-head"><div><h1>credits</h1><div class="subtitle">the people behind gmshelf.</div></div></div>
 <div class="credit-grid">
-<div class="glass credit"><div class="role">site</div><div class="who">hvtrs</div><div class="handle">(x8rr)</div><p>credits to <span class="for">hvtrs (x8rr)</span> for <span class="for">gmshelf</span>.</p></div>
-<div class="glass credit"><div class="role">api</div><div class="who">cvtzy</div><div class="handle">&nbsp;</div><p>credits to <span class="for">cvtzy</span> for the <span class="for">gmshelf api system</span>.</p></div>
+<div class="glass credit"><div class="role">vps api</div><div class="who">hvtrs</div><div class="handle">(x8rr)</div><p>credits to <span class="for">hvtrs (x8rr)</span> for <span class="for">gmshelf</span>.</p></div>
+<div class="glass credit"><div class="role">json api</div><div class="who">cvtzy</div><div class="handle">&nbsp;</div><p>credits to <span class="for">cvtzy</span> for the <span class="for">gmshelf json api system</span>.</p></div>
 </div>
 </div>
 </section>
 
-<footer>gmshelf &middot; free games api</footer>
+<footer>gmshelf &middot; free ubg api</footer>
 </main>
 
 <div class="eq" id="eq" aria-hidden="true"></div>
-
-<div class="modal-backdrop" id="summaryModal">
-<div class="modal">
-<div class="modal-head"><strong id="summaryTitle">game summary</strong><button class="modal-close" id="closeModal" aria-label="close"><i data-lucide="x"></i></button></div>
-<div id="summaryText">generating summary...</div>
-</div>
-</div>
 
 <script>
 const API = "https://gmshelf-api.karsons.workers.dev";
