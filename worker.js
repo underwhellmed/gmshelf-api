@@ -1,21 +1,37 @@
-const API_VERSION = "2.1.0";
+const API_VERSION = "2.2.0";
 
-// Game sources. Each has fallbacks so one upstream hiccup doesn't kill the api.
-const SERAPH_CATALOGS = [
-  "https://cdn.jsdelivr.net/gh/gmshelf/seraph@main/seraph.json",
-  "https://raw.githubusercontent.com/gmshelf/seraph/main/seraph.json"
-];
-const SERAPH_BASE = "https://cdn.jsdelivr.net/gh/gmshelf/seraph@main/";
-
-// jsdelivr's file listing has no rate limit problem, unlike api.github.com,
-// which blocks shared cloudflare worker ips.
-const TRUFFLED_LISTINGS = [
-  "https://data.jsdelivr.com/v1/packages/gh/gmshelf/truffled@main?structure=flat",
-  "https://data.jsdelivr.com/v1/packages/gh/gmshelf/truffled@master?structure=flat"
-];
-const TRUFFLED_BASE = "https://cdn.jsdelivr.net/gh/gmshelf/truffled@main/";
+/*
+  Both game repos are far too big for jsDelivr (seraph ~13 GB, truffled ~250 MB,
+  jsDelivr's limit is 50 MB per package), which is what caused the
+  "Failed to fetch version info" / 403 errors. So:
+    - catalogs are read straight from raw.githubusercontent.com (no size limit)
+    - games are played through raw.githack.com, which serves raw GitHub files
+      with the correct content-types so the html actually runs
+  If you ever host the games somewhere else, change playBase below.
+*/
+const SOURCES = {
+  seraph: {
+    catalog: "https://raw.githubusercontent.com/gmshelf/seraph/main/seraph.json",
+    playBase: "https://raw.githack.com/gmshelf/seraph/main/",
+    coverBase: "https://raw.githubusercontent.com/gmshelf/seraph/main/covers/",
+    coverExt: "jpg"
+  },
+  truffled: {
+    catalog: "https://raw.githubusercontent.com/gmshelf/truffled/main/truffled.json",
+    playBase: "https://raw.githack.com/gmshelf/truffled/main/",
+    coverBase: "https://raw.githubusercontent.com/gmshelf/truffled/main/covers/",
+    coverExt: "webp"
+  }
+};
 
 const UPSTREAM_TIMEOUT_MS = 8000;
+
+const BROWSER_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 " +
+    "(KHTML, like Gecko) Version/17.5 Safari/605.1.15",
+  "Accept-Language": "en-US,en;q=0.9"
+};
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -36,15 +52,10 @@ function json(data, status = 200, extra = {}) {
   });
 }
 
-async function fetchJson(url, options = {}) {
+async function fetchJson(url) {
   const response = await fetch(url, {
-    ...options,
     signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
-    headers: {
-      Accept: "application/json",
-      "User-Agent": "gmshelf-api",
-      ...(options.headers || {})
-    },
+    headers: { Accept: "application/json", "User-Agent": "gmshelf-api" },
     cf: { cacheTtl: 600, cacheEverything: true }
   });
 
@@ -52,37 +63,18 @@ async function fetchJson(url, options = {}) {
     throw new Error(`HTTP ${response.status} from ${new URL(url).hostname}`);
   }
 
-  return response.json();
-}
-
-// Try each url in order, return the first that works.
-async function fetchFirst(urls) {
-  let lastError = null;
-
-  for (const url of urls) {
-    try {
-      return await fetchJson(url);
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  throw lastError || new Error("all upstream requests failed");
+  // raw.githubusercontent serves json as text/plain, so parse manually
+  return JSON.parse(await response.text());
 }
 
 function extractList(data) {
   if (Array.isArray(data)) return data;
   if (!data || typeof data !== "object") return [];
 
-  const possibleKeys = [
-    "games", "items", "data", "results", "catalog", "list", "entries"
-  ];
-
-  for (const key of possibleKeys) {
+  for (const key of ["games", "items", "data", "results", "catalog", "list", "entries"]) {
     if (Array.isArray(data[key])) return data[key];
   }
 
-  // Some catalogs are objects keyed by game id.
   const values = Object.values(data);
 
   if (
@@ -95,17 +87,29 @@ function extractList(data) {
   return [];
 }
 
-function resolveUrl(raw, base) {
+// Catalog paths look like "/seraph/slope/index.html". They are relative to the
+// repo root, so strip the leading slash and join onto the play base.
+function playUrl(raw, base) {
   if (!raw) return "";
-  try {
-    return new URL(String(raw), base).href;
-  } catch {
-    return "";
-  }
+  const value = String(raw).trim();
+  if (/^https?:\/\//i.test(value)) return value;
+  return base + encodeURI(value.replace(/^\/+/, ""));
 }
 
-function normalizeGame(item, source, index, base) {
+// "/seraph/slope/index.html" -> "slope"
+function folderOf(raw) {
+  const parts = String(raw || "").split("?")[0].split("/").filter(Boolean);
+  return parts.length >= 3 ? parts[parts.length - 2] : "";
+}
+
+function isPlaceholderImage(value) {
+  return !value || /placeholder/i.test(String(value));
+}
+
+function normalizeGame(item, source, index) {
   if (!item || typeof item !== "object") return null;
+
+  const cfg = SOURCES[source];
 
   const name = String(
     item.name || item.title || item.gameName || item.id || item.slug || ""
@@ -113,15 +117,21 @@ function normalizeGame(item, source, index, base) {
 
   if (!name) return null;
 
-  const gameUrl = resolveUrl(
-    item.url || item.gameUrl || item.game_url || item.path || item.file || item.href,
-    base
-  );
+  const rawUrl =
+    item.url || item.gameUrl || item.game_url || item.path || item.file || item.href || "";
 
-  const cover = resolveUrl(
-    item.cover || item.img || item.image || item.thumbnail || item.thumb || item.icon,
-    base
-  );
+  const rawImg =
+    item.cover || item.img || item.image || item.thumbnail || item.thumb || item.icon || "";
+
+  // Use the repo's own cover when it has one (guessed from the game's folder).
+  // If that file doesn't exist the site falls back to /api/cover (image search).
+  let cover = "";
+  if (!isPlaceholderImage(rawImg)) {
+    cover = playUrl(rawImg, cfg.playBase);
+  } else {
+    const folder = folderOf(rawUrl);
+    if (folder) cover = `${cfg.coverBase}${encodeURIComponent(folder)}.${cfg.coverExt}`;
+  }
 
   const slug = String(item.id || item.slug || name)
     .toLowerCase()
@@ -131,63 +141,29 @@ function normalizeGame(item, source, index, base) {
   return {
     id: `${source}-${slug || index}`,
     name,
-    url: gameUrl,
+    url: playUrl(rawUrl, cfg.playBase),
     cover,
     source
   };
 }
 
-async function loadSeraph() {
-  const data = await fetchFirst(SERAPH_CATALOGS);
+async function loadSource(source) {
+  const data = await fetchJson(SOURCES[source].catalog);
   const list = extractList(data);
 
   if (!list.length) {
-    throw new Error("seraph.json loaded, but no game list was found");
+    throw new Error(`${source} catalog loaded, but no game list was found`);
   }
 
   return list
-    .map((item, index) => normalizeGame(item, "seraph", index, SERAPH_BASE))
+    .map((item, index) => normalizeGame(item, source, index))
     .filter(Boolean);
 }
 
-const SKIP_PATH = /(^|\/)(index\.html?|404\.html?|node_modules|\.github|assets|css|js|images|img|fonts)(\/|$)/i;
-
-async function loadTruffled() {
-  const data = await fetchFirst(TRUFFLED_LISTINGS);
-
-  const paths = (Array.isArray(data.files) ? data.files : [])
-    .map(file => String(file.name || "").replace(/^\/+/, ""))
-    .filter(path => /\.html?$/i.test(path) && !SKIP_PATH.test(path));
-
-  if (!paths.length) {
-    throw new Error("repository loaded, but no html game files were found");
-  }
-
-  return paths.map(path => {
-    const filename = path.split("/").pop().replace(/\.html?$/i, "");
-    const name = filename
-      .replace(/[-_]+/g, " ")
-      .replace(/\b\w/g, char => char.toUpperCase());
-
-    const encoded = path.split("/").map(encodeURIComponent).join("/");
-
-    return {
-      id: `truffled-${path.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-      name,
-      url: TRUFFLED_BASE + encoded,
-      cover: "",
-      source: "truffled"
-    };
-  });
-}
-
 async function loadCatalogs(source = "all") {
-  const selected = source === "all" ? ["seraph", "truffled"] : [source];
-  const loaders = { seraph: loadSeraph, truffled: loadTruffled };
+  const selected = source === "all" ? Object.keys(SOURCES) : [source];
 
-  const results = await Promise.allSettled(
-    selected.map(name => loaders[name]())
-  );
+  const results = await Promise.allSettled(selected.map(loadSource));
 
   const games = [];
   const errors = [];
@@ -213,35 +189,68 @@ async function loadCatalogs(source = "all") {
   return { games: unique, errors, sources };
 }
 
-async function findCover(name) {
-  const endpoint = new URL("https://en.wikipedia.org/w/api.php");
+/* ---------- cover image search ---------- */
 
-  endpoint.searchParams.set("action", "query");
-  endpoint.searchParams.set("generator", "search");
-  endpoint.searchParams.set("gsrsearch", `${name} video game`);
-  endpoint.searchParams.set("gsrnamespace", "0");
-  endpoint.searchParams.set("gsrlimit", "5");
-  endpoint.searchParams.set("prop", "pageimages");
-  endpoint.searchParams.set("piprop", "thumbnail");
-  endpoint.searchParams.set("pithumbsize", "600");
-  endpoint.searchParams.set("format", "json");
+// DuckDuckGo image search: grab a token from the html page, then ask i.js.
+async function searchDuckDuckGo(query) {
+  const q = encodeURIComponent(query);
 
-  const response = await fetch(endpoint.href, {
+  const page = await fetch(`https://duckduckgo.com/?q=${q}&iax=images&ia=images`, {
     signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
-    headers: {
-      Accept: "application/json",
-      "User-Agent": "gmshelf-api/2.1"
-    },
-    cf: { cacheTtl: 86400, cacheEverything: true }
+    headers: BROWSER_HEADERS
   });
+  if (!page.ok) return null;
 
-  if (!response.ok) return null;
+  const vqd = (await page.text()).match(/vqd=["']?([\d-]+)/)?.[1];
+  if (!vqd) return null;
 
-  const data = await response.json();
-  const pages = Object.values(data.query?.pages || {});
-  const page = pages.find(item => item.thumbnail?.source);
+  // p=1 keeps safe search on
+  const res = await fetch(
+    `https://duckduckgo.com/i.js?l=us-en&o=json&q=${q}&vqd=${vqd}&f=,,,,,&p=1`,
+    {
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+      headers: {
+        ...BROWSER_HEADERS,
+        Accept: "application/json",
+        Referer: "https://duckduckgo.com/"
+      }
+    }
+  );
+  if (!res.ok) return null;
 
-  return page?.thumbnail?.source || null;
+  const data = await res.json();
+  const hit = (data.results || []).find(r => /^https:\/\//.test(r.thumbnail || ""));
+  return hit?.thumbnail || null;
+}
+
+// Bing image search fallback: thumbnail urls are embedded in the result html.
+async function searchBing(query) {
+  const res = await fetch(
+    `https://www.bing.com/images/search?q=${encodeURIComponent(query)}&form=HDRSC3&adlt=strict`,
+    { signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS), headers: BROWSER_HEADERS }
+  );
+  if (!res.ok) return null;
+
+  const html = await res.text();
+  const match = html.match(/turl&quot;:&quot;(https:[^"]+?)&quot;/);
+  if (!match) return null;
+
+  return match[1].replace(/&amp;/g, "&");
+}
+
+async function findCover(name) {
+  const query = `${name} game logo`;
+
+  for (const search of [searchDuckDuckGo, searchBing]) {
+    try {
+      const image = await search(query);
+      if (image) return image;
+    } catch {
+      // try the next search engine
+    }
+  }
+
+  return null;
 }
 
 function escapeXml(text) {
@@ -273,7 +282,7 @@ function placeholderCover(name) {
     headers: {
       ...CORS_HEADERS,
       "Content-Type": "image/svg+xml; charset=utf-8",
-      "Cache-Control": "public, max-age=86400"
+      "Cache-Control": "public, max-age=3600"
     }
   });
 }
@@ -317,7 +326,7 @@ export default {
     if (path === "/api/games") {
       const source = (url.searchParams.get("source") || "all").toLowerCase();
 
-      if (!["all", "seraph", "truffled"].includes(source)) {
+      if (!["all", ...Object.keys(SOURCES)].includes(source)) {
         return json({
           ok: false,
           error: "source must be all, seraph, or truffled"
@@ -341,9 +350,6 @@ export default {
         );
 
         const games = filtered.slice(0, limit);
-
-        // Only a hard failure (nothing loaded at all) is an error status.
-        // If one source is down the other still serves, errors explain why.
         const nothingLoaded = result.games.length === 0 && result.errors.length > 0;
 
         return json({
@@ -374,21 +380,17 @@ export default {
         return json({ ok: false, error: "provide a valid game name" }, 400);
       }
 
-      try {
-        const image = await findCover(name);
+      const image = await findCover(name);
 
-        if (image) {
-          return new Response(null, {
-            status: 302,
-            headers: {
-              ...CORS_HEADERS,
-              Location: image,
-              "Cache-Control": "public, max-age=86400"
-            }
-          });
-        }
-      } catch {
-        // fall through to the generated placeholder
+      if (image) {
+        return new Response(null, {
+          status: 302,
+          headers: {
+            ...CORS_HEADERS,
+            Location: image,
+            "Cache-Control": "public, max-age=86400"
+          }
+        });
       }
 
       return placeholderCover(name);
