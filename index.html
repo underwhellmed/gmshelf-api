@@ -2,598 +2,557 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#090909">
-<title>gmshelf api</title>
-<script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-<style>
-:root {
-  color-scheme: dark;
-  --bg:#090909;
-  --surface:#111;
-  --surface2:#171717;
-  --border:#252525;
-  --text:#f5f5f5;
-  --muted:#858585;
-  --subtle:#555;
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-}
-*{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--text);font-size:13px;-webkit-font-smoothing:antialiased}
-button,input{font:inherit}
-button{cursor:pointer}
-a{color:inherit;text-decoration:none}
-header{
-  height:54px;position:sticky;top:0;z-index:10;
-  background:rgba(9,9,9,.94);border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 max(calc((100% - 1100px)/2),20px);
-  backdrop-filter:blur(14px)
-}
-.logo{font-size:16px;font-weight:800;letter-spacing:-1px}
-.logo span{color:var(--muted)}
-nav{display:flex;align-items:center;gap:19px}
-nav a{color:var(--muted);font-size:11px}
-nav a:hover{color:white}
-main{max-width:1100px;margin:auto;padding:45px 22px 70px}
-.hero{max-width:650px}
-.eyebrow{color:var(--muted);font-size:10px;letter-spacing:1.7px;font-weight:700;text-transform:lowercase}
-h1{font-size:clamp(34px,5vw,53px);letter-spacing:-2.8px;line-height:1.05;margin:15px 0 12px;font-weight:750}
-.hero p{color:var(--muted);font-size:13px;line-height:1.8;max-width:490px}
-.row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-.actions{margin-top:19px}
-.btn{
-  display:inline-flex;align-items:center;justify-content:center;gap:7px;
-  padding:9px 12px;border:1px solid var(--border);border-radius:6px;
-  color:var(--text);background:var(--surface);font-size:11px;font-weight:600;
-  transition:.15s
-}
-.btn:hover{background:var(--surface2);border-color:#555}
-.btn.primary{background:white;color:black;border-color:white}
-.btn.primary:hover{background:#ddd}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-.btn svg{width:14px;height:14px}
-.status{
-  display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border);
-  background:var(--surface);padding:6px 9px;border-radius:5px;
-  margin-top:12px;font-size:10px;color:var(--muted)
-}
-.dot{width:6px;height:6px;background:#666;border-radius:50%}
-.dot.online{background:#eee}
-.dot.offline{background:#777}
-.section{margin-top:42px}
-.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
-h2{font-size:16px;letter-spacing:-.35px;margin:0}
-.muted{color:var(--muted);font-size:11px;margin-top:5px}
-.search{width:220px;max-width:100%;padding:9px 11px;border-radius:6px;background:var(--surface);color:white;border:1px solid var(--border);outline:none;font-size:11px}
-.search:focus{border-color:#777}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:10px}
-.game{min-width:0;overflow:hidden;border:1px solid var(--border);border-radius:7px;background:var(--surface);transition:border-color .15s,transform .15s}
-.game:hover{border-color:#666;transform:translateY(-2px)}
-.game img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--surface2)}
-.game-info{padding:9px}
-.game-name{font-size:11px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.game-source{color:var(--muted);font-size:9px;margin-top:5px}
-.empty{grid-column:1/-1;padding:25px;border:1px dashed var(--border);text-align:center;color:var(--muted);border-radius:7px}
-.spec-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
-.spec{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:7px;padding:13px;min-width:0
-}
-.spec-top{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:10px}
-.spec-top svg{width:14px;height:14px}
-.spec-value{font-size:21px;font-weight:750;letter-spacing:-.8px;margin-top:12px;overflow-wrap:anywhere}
-.spec-description{font-size:9px;color:var(--muted);margin-top:4px}
-.ai-panel{border:1px solid var(--border);border-radius:8px;background:var(--surface);padding:17px}
-.ai-heading{display:flex;align-items:center;gap:8px}
-.ai-heading svg{width:16px;height:16px;color:#bbb}
-.ai-panel p{color:var(--muted);font-size:11px;line-height:1.7}
-#summary{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;line-height:1.85;color:#ccc;white-space:pre-wrap;overflow-wrap:anywhere}
-#summary:empty{display:none}
-.api-list{display:grid;gap:8px}
-.endpoint{border:1px solid var(--border);border-radius:7px;background:var(--surface);padding:12px}
-.endpoint-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-.method{color:#eee;font-size:9px;font-weight:800;background:#242424;border:1px solid #353535;padding:4px 6px;border-radius:3px}
-.method.post{background:#303030}
-.endpoint code,pre,.code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
-.endpoint code{font-size:11px;overflow-wrap:anywhere}
-.endpoint p{color:var(--muted);font-size:11px;margin:8px 0 0}
-.copy{margin-left:auto;display:inline-flex;align-items:center;gap:5px;padding:5px 7px;background:transparent;border:1px solid var(--border);color:#aaa;border-radius:4px;font-size:9px}
-.copy:hover{color:white;border-color:#666}
-.copy svg{width:11px;height:11px}
-pre{background:#0b0b0b;border:1px solid var(--border);border-radius:6px;padding:12px;color:#c4c4c4;font-size:10px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;overflow-x:auto}
-.base{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px;margin:10px 0 14px;overflow-wrap:anywhere}
-.base code{font-size:11px}
-.live-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:13px;color:var(--muted);font-size:10px}
-.live-indicator{display:flex;align-items:center;gap:7px}
-footer{border-top:1px solid var(--border);padding:22px;color:var(--muted);text-align:center;font-size:10px}
-footer a{text-decoration:underline;text-underline-offset:3px}
-@media(max-width:700px){.spec-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:600px){
-  header{padding:0 15px}
-  nav{gap:12px}
-  nav a{font-size:10px}
-  main{padding:35px 15px 55px}
-  h1{letter-spacing:-2px}
-  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#ffffff">
+  <title>gmshelf</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #fff;
+      --surface: #f7f7f7;
+      --border: #e9e9e9;
+      --text: #171717;
+      --muted: #858585;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, sans-serif;
+      font-size: 13px;
+    }
+
+    button, input { font: inherit; }
+
+    button {
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 9px 12px;
+    }
+
+    button:hover { background: var(--surface); }
+
+    .topbar {
+      height: 62px;
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: #fff;
+      z-index: 5;
+    }
+
+    .brand {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.7px;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #aaa;
+    }
+
+    .dot.online { background: #222; }
+    .dot.offline { background: #c44; }
+
+    main {
+      max-width: 1200px;
+      margin: auto;
+      padding: 38px 28px 70px;
+    }
+
+    .heading {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 25px;
+    }
+
+    h1 {
+      font-size: 25px;
+      letter-spacing: -1.2px;
+      margin: 0 0 7px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .search-wrap {
+      position: relative;
+      margin-bottom: 18px;
+    }
+
+    .search-wrap i {
+      position: absolute;
+      left: 13px;
+      top: 13px;
+      color: var(--muted);
+      width: 15px;
+      height: 15px;
+    }
+
+    #search {
+      width: 100%;
+      height: 42px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      outline: none;
+      padding: 0 14px 0 38px;
+      background: #fff;
+      color: var(--text);
+    }
+
+    #search:focus { border-color: #999; }
+
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 11px;
+      margin-bottom: 15px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+      gap: 16px;
+    }
+
+    .game {
+      min-width: 0;
+      cursor: pointer;
+    }
+
+    .cover {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      border-radius: 10px;
+      object-fit: cover;
+      display: block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+
+    .game-name {
+      font-weight: 600;
+      margin-top: 9px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .game-source {
+      color: var(--muted);
+      font-size: 10px;
+      margin-top: 4px;
+      text-transform: lowercase;
+    }
+
+    .empty {
+      padding: 35px 15px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      margin-top: 12px;
+    }
+
+    #gameError {
+      color: #a33;
+      border-color: #e6caca;
+      background: #fffafa;
+      white-space: pre-wrap;
+      text-align: left;
+      overflow-wrap: anywhere;
+    }
+
+    [hidden] { display: none !important; }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: #0007;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 10;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: white;
+      width: 100%;
+      max-width: 440px;
+      border-radius: 14px;
+      padding: 22px;
+      box-shadow: 0 15px 60px #0002;
+    }
+
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .modal-head strong { font-size: 15px; }
+
+    .modal p {
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    #summaryText {
+      white-space: pre-wrap;
+      line-height: 1.7;
+      color: var(--text);
+    }
+
+    .modal-close {
+      border: 0;
+      padding: 5px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 600px) {
+      .topbar { padding: 0 16px; }
+      main { padding: 28px 16px 50px; }
+      .heading { align-items: flex-start; flex-direction: column; }
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+    }
+  </style>
 </head>
 <body>
-
-<header>
-  <a class="logo" href="#">gm<span>shelf</span></a>
-  <nav>
-    <a href="#games">games</a>
-    <a href="#status">status</a>
-    <a href="#ai">ai</a>
-    <a href="#api">endpoints</a>
-  </nav>
-</header>
-
-<main>
-  <section class="hero">
-    <div class="eyebrow">public game catalog api</div>
-    <h1>games. simplified.</h1>
-    <p>
-      access a growing catalog of browser games through one
-      simple api. retrieve game details, playable urls, covers,
-      and ai-powered catalog insights.
-    </p>
-
+  <header class="topbar">
+    <div class="brand">gmshelf</div>
     <div class="status">
       <span class="dot" id="statusDot"></span>
-      <span id="statusText">connecting to api...</span>
+      <span id="statusText">connecting to api</span>
     </div>
+  </header>
 
-    <div class="row actions">
-      <a class="btn primary" href="#api">
-        <i data-lucide="code-2"></i> api documentation
-      </a>
-      <a class="btn" href="#games">
-        <i data-lucide="gamepad-2"></i> browse games
-      </a>
-    </div>
-  </section>
-
-  <section class="section" id="status">
-    <div class="section-head">
+  <main>
+    <div class="heading">
       <div>
-        <h2>system status</h2>
-        <div class="muted">live information from the api</div>
+        <h1>game library</h1>
+        <div class="subtitle">a collection of browser games in one serverless api.</div>
       </div>
-      <button class="btn" id="refreshStatus">
-        <i data-lucide="refresh-cw"></i> refresh
-      </button>
-    </div>
-
-    <div class="spec-grid">
-      <div class="spec">
-        <div class="spec-top">
-          api status <i data-lucide="activity"></i>
-        </div>
-        <div class="spec-value" id="specStatus">--</div>
-        <div class="spec-description">worker availability</div>
-      </div>
-
-      <div class="spec">
-        <div class="spec-top">
-          total games <i data-lucide="gamepad-2"></i>
-        </div>
-        <div class="spec-value" id="specGames">--</div>
-        <div class="spec-description">catalog entries loaded</div>
-      </div>
-
-      <div class="spec">
-        <div class="spec-top">
-          ai service <i data-lucide="sparkles"></i>
-        </div>
-        <div class="spec-value" id="specAI">--</div>
-        <div class="spec-description">groq configuration</div>
-      </div>
-
-      <div class="spec">
-        <div class="spec-top">
-          response time <i data-lucide="timer"></i>
-        </div>
-        <div class="spec-value" id="specLatency">--</div>
-        <div class="spec-description">last health check</div>
+      <div class="actions">
+        <button id="refreshButton"><i data-lucide="refresh-cw"></i> refresh</button>
       </div>
     </div>
 
-    <div class="live-row">
-      <span class="live-indicator">
-        <span class="dot" id="liveDot"></span>
-        <span id="liveText">waiting for first check</span>
-      </span>
-      <span id="lastChecked">last checked: --</span>
+    <div class="search-wrap">
+      <i data-lucide="search"></i>
+      <input id="search" type="search" placeholder="search games..." autocomplete="off">
     </div>
-  </section>
 
-  <section class="section" id="games">
-    <div class="section-head">
-      <div>
-        <h2>games</h2>
-        <div class="muted" id="gameCount">loading catalog...</div>
-      </div>
-      <input class="search" id="search" placeholder="search games...">
+    <div class="meta">
+      <span id="gameCount">loading games...</span>
+      <span id="apiVersion">gmshelf api</span>
     </div>
+
     <div class="grid" id="gameGrid"></div>
-  </section>
+    <div class="empty" id="emptyState" hidden>no games found.</div>
+    <div class="empty" id="loadingState">loading games...</div>
+    <div class="empty" id="gameError" hidden></div>
+  </main>
 
-  <section class="section" id="ai">
-    <div class="section-head">
-      <div>
-        <h2>ai summary</h2>
-        <div class="muted">catalog intelligence · powered by groq</div>
+  <div class="modal-backdrop" id="summaryModal">
+    <div class="modal">
+      <div class="modal-head">
+        <strong id="summaryTitle">game summary</strong>
+        <button class="modal-close" id="closeModal" aria-label="close">
+          <i data-lucide="x"></i>
+        </button>
       </div>
+      <div id="summaryText">generating summary...</div>
     </div>
+  </div>
 
-    <div class="ai-panel">
-      <div class="ai-heading">
-        <i data-lucide="sparkles"></i>
-        <strong>analyze the catalog</strong>
-      </div>
-      <p>
-        generate an overview of available games, catalog sources,
-        and metadata coverage using ai.
-      </p>
-      <button class="btn primary" id="summaryBtn">
-        <i data-lucide="wand-sparkles"></i>
-        generate summary
-      </button>
-      <div id="summary"></div>
-    </div>
-  </section>
+  <script>
+    const API = "https://gmshelf-api.workers.dev";
 
-  <section class="section" id="api">
-    <div class="section-head">
-      <div>
-        <h2>api endpoints</h2>
-        <div class="muted">get and post · public · no user key required</div>
-      </div>
-      <button class="btn" id="copyBase">
-        <i data-lucide="copy"></i> copy base url
-      </button>
-    </div>
+    const grid = document.getElementById("gameGrid");
+    const searchInput = document.getElementById("search");
+    const countText = document.getElementById("gameCount");
+    const statusText = document.getElementById("statusText");
+    const statusDot = document.getElementById("statusDot");
+    const loadingState = document.getElementById("loadingState");
+    const emptyState = document.getElementById("emptyState");
+    const gameError = document.getElementById("gameError");
 
-    <div class="muted">base url</div>
-    <div class="base">
-      <code id="baseUrl"></code>
-      <button class="copy" id="copyBaseSmall">
-        <i data-lucide="copy"></i> copy
-      </button>
-    </div>
+    let games = [];
+    let filteredGames = [];
+    let apiOnline = false;
 
-    <div class="api-list">
-      <div class="endpoint">
-        <div class="endpoint-top">
-          <span class="method">get</span>
-          <code>/api</code>
-          <button class="copy" data-path="/api"><i data-lucide="copy"></i> copy</button>
-        </div>
-        <p>returns api information and available endpoints.</p>
-      </div>
-
-      <div class="endpoint">
-        <div class="endpoint-top">
-          <span class="method">get</span>
-          <code>/api/games</code>
-          <button class="copy" data-path="/api/games"><i data-lucide="copy"></i> copy</button>
-        </div>
-        <p>returns all games from available catalogs.</p>
-      </div>
-
-      <div class="endpoint">
-        <div class="endpoint-top">
-          <span class="method">get</span>
-          <code>/api/games?source=seraph</code>
-          <button class="copy" data-path="/api/games?source=seraph"><i data-lucide="copy"></i> copy</button>
-        </div>
-        <p>returns games from seraph only.</p>
-      </div>
-
-      <div class="endpoint">
-        <div class="endpoint-top">
-          <span class="method">get</span>
-          <code>/api/games?source=truffled</code>
-          <button class="copy" data-path="/api/games?source=truffled"><i data-lucide="copy"></i> copy</button>
-        </div>
-        <p>returns games from truffled only.</p>
-      </div>
-
-      <div class="endpoint">
-        <div class="endpoint-top">
-          <span class="method">get</span>
-          <code>/api/games?search=mario</code>
-          <button class="copy" data-path="/api/games?search=mario"><i data-lucide="copy"></i> copy</button>
-        </div>
-        <p>searches game names and ids.</p>
-      </div>
-
-      <div class="endpoint">
-        <div class="endpoint-top">
-          <span class="method">get</span>
-          <code>/api/games?limit=300</code>
-          <button class="copy" data-path="/api/games?limit=300"><i data-lucide="copy"></i> copy</button>
-        </div>
-        <p>limits results. maximum supported limit: 1000.</p>
-      </div>
-
-      <div class="endpoint">
-        <div class="endpoint-top">
-          <span class="method">get</span>
-          <code>/api/cover?name=mario</code>
-          <button class="copy" data-path="/api/cover?name=mario"><i data-lucide="copy"></i> copy</button>
-        </div>
-        <p>finds a remote cover and redirects to its image url.</p>
-      </div>
-
-      <div class="endpoint">
-        <div class="endpoint-top">
-          <span class="method post">post</span>
-          <code>/api/summary</code>
-          <button class="copy" data-path="/api/summary"><i data-lucide="copy"></i> copy</button>
-        </div>
-        <p>generates a groq ai catalog summary.</p>
-        <pre>{
-  "games": [
-    {
-      "name": "example game",
-      "source": "seraph",
-      "hasCover": true,
-      "hasPlayableUrl": true
+    function refreshIcons() {
+      if (window.lucide) {
+        try { lucide.createIcons(); } catch (error) {
+          console.warn("icon rendering failed:", error);
+        }
+      }
     }
-  ]
-}</pre>
-      </div>
 
-      <div class="endpoint">
-        <div class="endpoint-top">
-          <span class="method">get</span>
-          <code>/api/health</code>
-          <button class="copy" data-path="/api/health"><i data-lucide="copy"></i> copy</button>
-        </div>
-        <p>checks api availability and ai configuration.</p>
-      </div>
-    </div>
+    function setStatus(online, message) {
+      apiOnline = online;
+      statusDot.className = "dot " + (online ? "online" : "offline");
+      statusText.textContent = message;
+    }
 
-    <div class="section">
-      <h2>quick integration</h2>
-      <p class="muted">retrieve the complete game catalog from your html.</p>
-      <pre>const response = await fetch(
-  "https://gmshelf-api.workers.dev/api/games?limit=1000"
-);
+    function setError(message) {
+      gameError.hidden = !message;
+      gameError.textContent = message || "";
+    }
 
-const data = await response.json();
+    async function request(path, options = {}) {
+      const response = await fetch(API + path, {
+        ...options,
+        headers: {
+          "Accept": "application/json",
+          ...(options.headers || {})
+        }
+      });
 
-data.games.forEach(game => {
-  console.log(game.name);
-  console.log(game.cover);
-  console.log(game.url);
-});</pre>
-      <button class="btn" id="copyExample">
-        <i data-lucide="copy"></i> copy example
-      </button>
-    </div>
-  </section>
-</main>
+      const text = await response.text();
+      let data;
 
-<footer>
-  gmshelf · <a href="https://gmshelf-api.workers.dev/api">api root</a>
-  · built on cloudflare workers
-</footer>
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error("api returned invalid json (" + response.status + ").");
+      }
 
-<script>
-const API = "https://gmshelf-api.workers.dev";
-let games = [];
+      if (!response.ok) {
+        throw new Error(data.error || data.message || "request failed (" + response.status + ").");
+      }
 
-const $ = selector => document.querySelector(selector);
+      return data;
+    }
 
-$("#baseUrl").textContent = API;
+    async function checkHealth() {
+      try {
+        const data = await request("/api/health");
 
-async function copy(value, button) {
-  try {
-    await navigator.clipboard.writeText(value);
-  } catch {
-    const el = document.createElement("textarea");
-    el.value = value;
-    document.body.append(el);
-    el.select();
-    document.execCommand("copy");
-    el.remove();
-  }
+        if (data.ok !== true) {
+          throw new Error(data.error || "api health check failed.");
+        }
 
-  if (button) {
-    const original = button.innerHTML;
-    button.textContent = "copied";
-    setTimeout(() => {
-      button.innerHTML = original;
-      lucide.createIcons();
-    }, 1200);
-  }
-}
+        setStatus(true, "api connected");
 
-$("#copyBase").onclick = e => copy(API, e.currentTarget);
-$("#copyBaseSmall").onclick = e => copy(API, e.currentTarget);
+        if (data.version) {
+          document.getElementById("apiVersion").textContent =
+            "api v" + data.version;
+        }
 
-document.querySelectorAll("[data-path]").forEach(button => {
-  button.onclick = () => copy(API + button.dataset.path, button);
-});
+        return true;
+      } catch (error) {
+        setStatus(false, "api unavailable");
+        console.error("health check failed:", error);
+        return false;
+      }
+    }
 
-$("#copyExample").onclick = e => copy(
-`const response = await fetch("${API}/api/games?limit=1000");
-const data = await response.json();
-data.games.forEach(game => console.log(game.name, game.cover, game.url));`,
-e.currentTarget
-);
+    function coverFallback(name) {
+      return API + "/api/cover?name=" + encodeURIComponent(name || "game");
+    }
 
-function setLive(ok, text) {
-  $("#statusDot").className = "dot " + (ok ? "online" : "offline");
-  $("#liveDot").className = "dot " + (ok ? "online" : "offline");
-  $("#statusText").textContent = text;
-  $("#specStatus").textContent = ok ? "online" : "offline";
-  $("#liveText").textContent = ok ? "all systems responding" : "api connection failed";
-}
+    function createGameCard(game) {
+      const card = document.createElement("article");
+      card.className = "game";
 
-async function checkStatus() {
-  const started = performance.now();
+      const image = document.createElement("img");
+      image.className = "cover";
+      image.loading = "lazy";
+      image.alt = game.name || "game cover";
+      image.src = game.cover || coverFallback(game.name);
 
-  try {
-    const res = await fetch(API + "/api/health", {
-      cache: "no-store"
+      image.onerror = () => {
+        image.onerror = null;
+        image.src = coverFallback(game.name);
+      };
+
+      const name = document.createElement("div");
+      name.className = "game-name";
+      name.textContent = game.name || "untitled game";
+
+      const source = document.createElement("div");
+      source.className = "game-source";
+      source.textContent = game.source || "game";
+
+      card.append(image, name, source);
+
+      card.addEventListener("click", () => {
+        if (game.url) {
+          window.open(game.url, "_blank", "noopener,noreferrer");
+        }
+      });
+
+      return card;
+    }
+
+    function renderGames() {
+      grid.replaceChildren();
+
+      const list = filteredGames;
+
+      for (const game of list) {
+        grid.appendChild(createGameCard(game));
+      }
+
+      countText.textContent =
+        list.length + " games" +
+        (list.length !== games.length ? " shown" : " available");
+
+      emptyState.hidden = list.length !== 0;
+      refreshIcons();
+    }
+
+    async function loadGames() {
+      loadingState.hidden = false;
+      loadingState.textContent = "loading games...";
+      emptyState.hidden = true;
+      setError("");
+
+      try {
+        const data = await request("/api/games?limit=1000");
+
+        if (!Array.isArray(data.games)) {
+          throw new Error("api response did not contain a games array.");
+        }
+
+        games = data.games;
+        filteredGames = [...games];
+
+        loadingState.hidden = true;
+        renderGames();
+
+        if (Array.isArray(data.errors) && data.errors.length) {
+          setError(
+            "some game sources could not load:\n" +
+            data.errors.map(error =>
+              typeof error === "string"
+                ? error
+                : JSON.stringify(error)
+            ).join("\n")
+          );
+        }
+
+        console.log("gmshelf games loaded:", data);
+      } catch (error) {
+        loadingState.hidden = true;
+        countText.textContent = "unable to load games";
+        setError("could not load games:\n" + error.message);
+        console.error("game loading failed:", error);
+      }
+    }
+
+    function searchGames() {
+      const query = searchInput.value.trim().toLowerCase();
+
+      filteredGames = games.filter(game => {
+        const name = (game.name || "").toLowerCase();
+        const source = (game.source || "").toLowerCase();
+        return name.includes(query) || source.includes(query);
+      });
+
+      renderGames();
+    }
+
+    async function showSummary(game) {
+      const modal = document.getElementById("summaryModal");
+      const title = document.getElementById("summaryTitle");
+      const output = document.getElementById("summaryText");
+
+      title.textContent = game.name || "game summary";
+      output.textContent = "generating summary...";
+      modal.classList.add("open");
+      refreshIcons();
+
+      try {
+        const data = await request("/api/summary", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: game.name,
+            url: game.url,
+            source: game.source
+          })
+        });
+
+        if (!data.ok) {
+          throw new Error(data.error || "summary generation failed.");
+        }
+
+        output.textContent = String(
+          data.summary || data.text || "no summary available."
+        ).toLowerCase();
+      } catch (error) {
+        output.textContent = "could not generate summary: " + error.message;
+      }
+    }
+
+    document.getElementById("closeModal").addEventListener("click", () => {
+      document.getElementById("summaryModal").classList.remove("open");
     });
 
-    if (!res.ok) throw new Error("health check failed");
-
-    const data = await res.json();
-    const latency = Math.round(performance.now() - started);
-
-    setLive(true, data.aiConfigured
-      ? "api operational · ai enabled"
-      : "api operational · ai unavailable"
-    );
-
-    $("#specAI").textContent = data.aiConfigured ? "ready" : "offline";
-    $("#specLatency").textContent = latency + " ms";
-    $("#lastChecked").textContent =
-      "last checked: " + new Date().toLocaleTimeString();
-  } catch {
-    setLive(false, "api unavailable");
-    $("#specAI").textContent = "--";
-    $("#specLatency").textContent = "--";
-    $("#lastChecked").textContent =
-      "last checked: " + new Date().toLocaleTimeString();
-  }
-}
-
-async function renderGames() {
-  const grid = $("#gameGrid");
-  grid.replaceChildren();
-
-  if (!games.length) {
-    const empty = document.createElement("div");
-    empty.className = "empty";
-    empty.textContent = "no games found.";
-    grid.append(empty);
-    return;
-  }
-
-  for (const game of games) {
-    const card = document.createElement("a");
-    card.className = "game";
-    card.href = game.url || "#";
-    card.target = "_blank";
-    card.rel = "noopener noreferrer";
-
-    const img = document.createElement("img");
-    img.loading = "lazy";
-    img.src = game.cover || "";
-    img.alt = game.name;
-    img.onerror = () => {
-      img.onerror = null;
-      img.removeAttribute("src");
-    };
-
-    const info = document.createElement("div");
-    info.className = "game-info";
-
-    const name = document.createElement("div");
-    name.className = "game-name";
-    name.textContent = game.name;
-
-    const source = document.createElement("div");
-    source.className = "game-source";
-    source.textContent = game.source;
-
-    info.append(name, source);
-    card.append(img, info);
-    grid.append(card);
-  }
-}
-
-async function loadGames() {
-  try {
-    const res = await fetch(API + "/api/games?limit=1000");
-    if (!res.ok) throw new Error("catalog unavailable");
-
-    const data = await res.json();
-    games = data.games || [];
-
-    renderGames();
-    $("#gameCount").textContent =
-      `${data.total} games · ${data.errors?.length || 0} source errors`;
-    $("#specGames").textContent = data.total ?? games.length;
-  } catch (error) {
-    $("#gameCount").textContent = error.message;
-    $("#specGames").textContent = "--";
-    renderGames();
-  }
-}
-
-$("#search").addEventListener("input", e => {
-  const q = e.target.value.toLowerCase().trim();
-  const filtered = games.filter(game =>
-    game.name.toLowerCase().includes(q)
-  );
-
-  const original = games;
-  games = filtered;
-  renderGames();
-  games = original;
-});
-
-$("#summaryBtn").onclick = async () => {
-  const button = $("#summaryBtn");
-  const output = $("#summary");
-
-  if (!games.length) {
-    output.textContent = "no games are loaded.";
-    return;
-  }
-
-  button.disabled = true;
-  button.innerHTML = '<i data-lucide="loader-circle"></i> generating...';
-  lucide.createIcons();
-  output.textContent = "analyzing catalog...";
-
-  try {
-    const res = await fetch(API + "/api/summary", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        games: games.slice(0, 1000).map(game => ({
-          name: game.name,
-          source: game.source,
-          hasCover: Boolean(game.cover),
-          hasPlayableUrl: Boolean(game.url)
-        }))
-      })
+    document.getElementById("summaryModal").addEventListener("click", event => {
+      if (event.target.id === "summaryModal") {
+        event.currentTarget.classList.remove("open");
+      }
     });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "summary failed");
+    document.getElementById("refreshButton").addEventListener("click", async () => {
+      await checkHealth();
+      await loadGames();
+    });
 
-    output.textContent = String(data.summary || "").toLowerCase();
-  } catch (error) {
-    output.textContent = error.message.toLowerCase();
-  } finally {
-    button.disabled = false;
-    button.innerHTML = '<i data-lucide="wand-sparkles"></i> generate summary';
-    lucide.createIcons();
-  }
-};
+    searchInput.addEventListener("input", searchGames);
 
-$("#refreshStatus").onclick = checkStatus;
+    async function init() {
+      refreshIcons();
+      await checkHealth();
+      await loadGames();
 
-checkStatus();
-loadGames();
-lucide.createIcons();
+      setInterval(checkHealth, 30000);
+    }
 
-// Refresh live API health every 30 seconds.
-setInterval(checkStatus, 30000);
-</script>
+    init();
+  </script>
 </body>
 </html>
